@@ -1,0 +1,185 @@
+import React, { useState, useEffect } from 'react';
+
+const TicTacToeGame = () => {
+  const [boardSize, setBoardSize] = useState<3 | 5 | 10>(3);
+  const [gameMode, setGameMode] useState<'player' | 'computer'>('player');
+  const [board, setBoard] = useState<string[][]>([]);
+  const [currentPlayer, setCurrentPlayer] = useState<'X' | 'O'>('X');
+  const [winner, setWinner] = useState<string | null>(null);
+  const [isDraw, setIsDraw] = useState(false);
+
+  // تهيئة اللوحة عند تغيير الحجم
+  useEffect(() => {
+    initializeBoard();
+  }, [boardSize]);
+
+  const initializeBoard = () => {
+    const newBoard = Array(boardSize).fill(null).map(() => 
+      Array(boardSize).fill(null)
+    );
+    setBoard(newBoard);
+    setWinner(null);
+    setIsDraw(false);
+    setCurrentPlayer('X');
+  };
+
+  const handleCellClick = (row: number, col: number) => {
+    if (board[row][col] || winner || isDraw) return;
+    
+    const newBoard = [...board];
+    newBoard[row][col] = currentPlayer;
+    setBoard(newBoard);
+    
+    checkWinner(newBoard, currentPlayer);
+    checkDraw(newBoard);
+    
+    const nextPlayer = currentPlayer === 'X' ? 'O' : 'X';
+    setCurrentPlayer(nextPlayer);
+    
+    // إذا كان نمط اللعب ضد الكمبيوتر وكان الدور للكمبيوتر
+    if (gameMode === 'computer' && nextPlayer === 'O' && !winner && !isDraw) {
+      setTimeout(computerMove, 500);
+    }
+  };
+
+  const computerMove = () => {
+    const emptyCells: [number, number][] = [];
+    board.forEach((row, rowIndex) => {
+      row.forEach((cell, colIndex) => {
+        if (!cell) emptyCells.push([rowIndex, colIndex]);
+      });
+    });
+    
+    if (emptyCells.length > 0) {
+      const randomIndex = Math.floor(Math.random() * emptyCells.length);
+      const [row, col] = emptyCells[randomIndex];
+      handleCellClick(row, col);
+    }
+  };
+
+  const checkWinner = (currentBoard: string[][], player: string) => {
+    // التحقق من الصفوف
+    for (let i = 0; i < boardSize; i++) {
+      if (currentBoard[i].every(cell => cell === player)) {
+        setWinner(player);
+        return;
+      }
+    }
+    
+    // التحقق من الأعمدة
+    for (let i = 0; i < boardSize; i++) {
+      const column = currentBoard.map(row => row[i]);
+      if (column.every(cell => cell === player)) {
+        setWinner(player);
+        return;
+      }
+    }
+    
+    // التحقق من القطر الرئيسي
+    const mainDiagonal = [];
+    for (let i = 0; i < boardSize; i++) {
+      mainDiagonal.push(currentBoard[i][i]);
+    }
+    if (mainDiagonal.every(cell => cell === player)) {
+      setWinner(player);
+      return;
+    }
+    
+    // التحقق من القطر الثانوي
+    const antiDiagonal = [];
+    for (let i = 0; i < boardSize; i++) {
+      antiDiagonal.push(currentBoard[i][boardSize - 1 - i]);
+    }
+    if (antiDiagonal.every(cell => cell === player)) {
+      setWinner(player);
+      return;
+    }
+  };
+
+  const checkDraw = (currentBoard: string[][]) => {
+    const isBoardFull = currentBoard.flat().every(cell => cell !== null);
+    if (isBoardFull && !winner) {
+      setIsDraw(true);
+    }
+  };
+
+  const getCellSize = () => {
+    if (boardSize === 3) return 'w-20 h-20';
+    if (boardSize === 5) return 'w-16 h-16';
+    return 'w-10 h-10';
+  };
+
+  return (
+    <div className="min-h-screen bg-black text-red-600 flex flex-col items-center justify-center p-4">
+      <h1 className="text-4xl font-bold mb-6">لعبة إكس أو</h1>
+      
+      <div className="mb-6 flex flex-col sm:flex-row gap-4">
+        <div className="flex flex-col items-center">
+          <label className="text-lg mb-2">حجم اللوحة:</label>
+          <select 
+            value={boardSize} 
+            onChange={(e) => setBoardSize(parseInt(e.target.value) as 3 | 5 | 10)}
+            className="bg-red-600 text-black px-3 py-2 rounded"
+          >
+            <option value={3}>3x3</option>
+            <option value={5}>5x5</option>
+            <option value={10}>10x10</option>
+          </select>
+        </div>
+        
+        <div className="flex flex-col items-center">
+          <label className="text-lg mb-2">نمط اللعب:</label>
+          <select 
+            value={gameMode} 
+            onChange={(e) => setGameMode(e.target.value as 'player' | 'computer')}
+            className="bg-red-600 text-black px-3 py-2 rounded"
+          >
+            <option value="player">لاعب مقابل لاعب</option>
+            <option value="computer">لاعب مقابل كمبيوتر</option>
+          </select>
+        </div>
+      </div>
+      
+      <div className="mb-4">
+        <button 
+          onClick={initializeBoard}
+          className="bg-red-600 text-black px-4 py-2 rounded-lg font-semibold hover:bg-red-700 transition"
+        >
+          لعب مرة أخرى
+        </button>
+      </div>
+      
+      <div className="mb-4 text-xl">
+        {winner ? (
+          <p>الفائز: {winner}</p>
+        ) : isDraw ? (
+          <p>تعادل!</p>
+        ) : (
+          <p>دور اللاعب: {currentPlayer}</p>
+        )}
+      </div>
+      
+      <div className={`grid gap-2 mb-6 ${boardSize === 3 ? 'grid-cols-3' : boardSize === 5 ? 'grid-cols-5' : 'grid-cols-10'}`}>
+        {board.map((row, rowIndex) => (
+          row.map((cell, colIndex) => (
+            <button
+              key={`${rowIndex}-${colIndex}`}
+              className={`${getCellSize()} bg-red-900 flex items-center justify-center text-3xl font-bold border-2 border-red-600 
+                         hover:bg-red-800 transition ${cell === 'X' ? 'text-white' : 'text-black'}`}
+              onClick={() => handleCellClick(rowIndex, colIndex)}
+              disabled={!!winner || isDraw}
+            >
+              {cell}
+            </button>
+          ))
+        ))}
+      </div>
+      
+      <div className="text-center mt-4">
+        <p>تم تطوير اللعبة بألوان الأحمر والأسود</p>
+      </div>
+    </div>
+  );
+};
+
+export default TicTacToeGame;
